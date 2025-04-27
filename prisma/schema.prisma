@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+ 
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique  // automatically indexed
+  email     String   @unique  // automatically indexed
+  username  String   @unique  // automatically indexed
+  firstName String?
+  lastName  String?
+  createdAt DateTime @default(now())
+  image     String?
+  events    Event[]
+  tickets   Ticket[]
+
+
+  @@index([email])
+ 
+}
+
+model Event {
+  id            String   @id @default(cuid())
+  title       String   @db.VarChar(100)
+description String?  @db.VarChar(1000)
+  thumbnail     String?
+  organizerId   String
+  isFree        Boolean  @default(false)
+  price         String?
+  startDateTime DateTime @default(now())
+  endDateTime   DateTime @default(now())
+  url           String?
+  location      String?
+  slots          String
+  category      Category
+  organizer     User     @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  tickets       Ticket[]
+    @@index([organizerId])   
+     @@index([category]) 
+}
+model Ticket {
+  id       String   @id @default(cuid())
+  eventId  String
+  userId   String
+  stripeId String
+  amount   String
+  qrcode   String
+  status   String   @default("booked")
+  createdAt DateTime @default(now())
+  
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // Ensures one user can only book one ticket per event
+  @@unique([userId, eventId])  
+    @@index([userId])          // Speeds up "Get all tickets for a user"
+  @@index([eventId])         // Speeds up "Get all attendees for an event"
+  @@index([status]) 
+}
+
+enum Category {
+  CONFERENCE
+  WORKSHOP
+  DEVELOPMENT
+  CONCERT
+  CODING
+  COLLEGE_FEST // Added for college-related events
+  COMMUNITY_FAIR // Added for general public events
+}
+
